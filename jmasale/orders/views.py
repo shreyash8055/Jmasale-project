@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 
-from jmasale.orders.models import Order, OrderItem
+from orders.models import Order, OrderItem
 
 class OrderViewSet(ViewSet):
     permission_classes = [IsAuthenticated]

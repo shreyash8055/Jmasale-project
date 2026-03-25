@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'product',
     'cart',
     'orders',
+    'payment'
 ]
 
 MEDIA_URL = '/media/'
