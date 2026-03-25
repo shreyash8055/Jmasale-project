@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'core',
     'rest_framework',
     'rest_framework_simplejwt',
-    'product'
+    'product',
+    'cart',
+    'orders',
 ]
 
 MEDIA_URL = '/media/'
