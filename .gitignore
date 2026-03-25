@@ -1,0 +1,17 @@
+# Python compiled files
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment
+.venv/
+env/
+
+# VS Code
+.vscode/
+
+# Django
+db.sqlite3
+
+# Logs
+*.log
