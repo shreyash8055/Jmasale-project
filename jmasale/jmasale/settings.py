@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from logging import root
 import os
 from pathlib import Path
 
@@ -25,8 +26,8 @@ SECRET_KEY = 'django-insecure-t@rzvgdclo)3!@1o)xfpswxhz825*t_=@$ari1ce)lnc%e(et4
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Application definition
@@ -43,9 +44,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'product',
-    'cart',
+    'cart.apps.CartConfig',    
     'orders',
-    'payment'
+    'payment',
+    'corsheaders',
 ]
 
 MEDIA_URL = '/media/'
@@ -70,6 +72,7 @@ SIMPLE_JWT = {
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,9 +80,64 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+     'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'jmasale.middleware.APITimingMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
 ]
 
+
+CORS_ALLOW_ALL_ORIGINS = True
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s [%(name)s] %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
+            'formatter': 'simple',
+            'level': 'DEBUG',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+}
+
 ROOT_URLCONF = 'jmasale.urls'
+
+
+try:
+    import django_redis  # noqa: F401
+
+    # Use Redis cache when django-redis is installed.
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # If Redis isn't running, don't break API requests during development.
+                "IGNORE_EXCEPTIONS": True,
+            },
+        }
+    }
+except Exception:
+    # Fallback for local development / CI environments without django-redis.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-jmasale-cache",
+        }
+    }
+
+
 
 TEMPLATES = [
     {
@@ -107,7 +165,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'jmasale_db',
         'USER': 'postgres',
-        'PASSWORD': 'root', 
+        'PASSWORD': 'root',
         'HOST': 'localhost',
         'PORT': '5432',
     }

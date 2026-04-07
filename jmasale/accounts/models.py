@@ -2,8 +2,7 @@ from django.db import models
 
 # Create your models here.
 from django.contrib.auth.models import AbstractUser
-from django.db import models
-from core.constants import ROLE_CHOICES, ROLE_CUSTOMER
+from core.constants import ROLE_CHOICES, ROLE_CUSTOMER, ROLE_SUPERADMIN
 from core.models import BaseModel
 
 class User(AbstractUser, BaseModel):
@@ -14,5 +13,13 @@ class User(AbstractUser, BaseModel):
 
     def save(self, *args, **kwargs):
         if self.is_superuser:
-            self.role = 'superadmin'
+            self.role = ROLE_SUPERADMIN
         super().save(*args, **kwargs)
+
+    parent = models.ForeignKey(
+    'self',
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='members'
+)

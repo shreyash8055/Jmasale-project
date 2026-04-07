@@ -1,11 +1,11 @@
-from django.shortcuts import render
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-
+from .tasks import send_order_confirmation
 from orders.models import Order, OrderItem
-
+import logging
+logger = logging.getLogger(__name__)
 class OrderViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -16,30 +16,32 @@ class OrderViewSet(ViewSet):
         items = cart.items.all()
         if not items:
             return Response({"error": "Cart is empty"}, status=400)
+
         total_price = 0
+        order = Order.objects.create(user=user, total_price=0)
 
-        order = Order.objects.create(user=user, total_price=total_price)
         for item in items:
-                product = item.product
+            product = item.product
 
-                if product.stock < item.quantity:
-                    raise Exception(f"{product.name} out of stock")
+            if product.stock < item.quantity:
+                raise Exception(f"{product.name} out of stock")
 
-                product.stock -= item.quantity
-                product.save()
+            product.stock -= item.quantity
+            product.save(update_fields=["stock"])
 
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=item.quantity,
-                    price=product.price
-                )
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=item.quantity,
+                price=product.price,
+            )
 
-                total_price += product.price * item.quantity
+            total_price += product.price * item.quantity
 
-                order.total_price = total_price
-                order.save()
+        order.total_price = total_price
+        order.save(update_fields=["total_price"])
 
-                items.delete()
-
-                return Response({"message": "Order placed successfully"})
+        items.delete()
+        logger.info(f"Order placed for user {request.user}")
+        send_order_confirmation.delay(user.email)
+        return Response({"message": "Order placed successfully"})
